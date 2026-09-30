@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Tempahan Lawatan Parlimen Malaysia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+</head>
+<body>
+<header><h1 id="t-title"></h1><p id="t-sub"></p>
+  <div class="bar"><button id="lang">EN</button></div></header>
+<main>
+  <div class="steps" id="steps"></div>
+  <div class="grid">
+    <div class="card">
+      <div class="head"><button class="nav" id="prev">‹</button><b id="mon"></b><button class="nav" id="next">›</button></div>
+      <div class="cal" id="cal"></div><div class="legend" id="legend"></div>
+    </div>
+    <div class="card" id="side"></div>
+  </div>
+  <div class="foot"><a href="staff.html">Kakitangan / Staff</a></div>
+</main>
+<script>
+const L={
+ms:{title:"Sistem Tempahan Lawatan Parlimen",sub:"Tempah lawatan ke Parlimen Malaysia • 4 lawatan sehari (Isnin–Jumaat) • Kalendar Dewan Rakyat & Dewan Negara",
+ steps:["1 Pilih tarikh","2 Pilih slot","3 Isi borang","4 Dapat ID tempahan"],
+ months:["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"],
+ dow:["Ahd","Isn","Sel","Rab","Kha","Jum","Sab"],left:"baki",fullT:"Penuh",dr:"Dewan Rakyat",dn:"Dewan Negara",
+ lAvail:"Ada slot",lWarn:"Hampir penuh",lFull:"Penuh",pick:"Pilih tarikh pada kalendar untuk melihat slot.",
+ sit:"Persidangan berlangsung hari ini – lawatan tetap dibenarkan.",slotL:"Slot lawatan",book:"Tempah",
+ name:"Nama",ic:"No. KP / Pasport",phone:"Telefon",email:"E-mel",org:"Organisasi (sekolah/NGO/individu)",cnt:"Bilangan (maks 30)",oku:"Keperluan khas (OKU)",
+ pdpa:"Saya bersetuju dengan PDPA 2010",submit:"Sahkan tempahan",taken:"Maaf, slot ini baru sahaja ditempah orang lain.",
+ okT:"Tempahan disahkan",okD:"Simpan ID tempahan anda. Slot ini telah ditutup untuk orang lain.",errF:"Sila lengkapkan semua medan dan setuju PDPA.",errC:"Bilangan mesti 1–30.",
+ closed:"Tutup",lClosed:"Tutup (hujung minggu)",wk:"Lawatan hanya dibenarkan pada hari bekerja (Isnin–Jumaat).",cfg:"Sistem belum disambungkan ke Supabase. Sila isi config.js."},
+en:{title:"Parliament Visit Booking System",sub:"Book a visit to the Parliament of Malaysia • 4 visits per day (Mon–Fri) • Dewan Rakyat & Dewan Negara calendar",
+ steps:["1 Pick a date","2 Pick a slot","3 Fill the form","4 Get booking ID"],
+ months:["January","February","March","April","May","June","July","August","September","October","November","December"],
+ dow:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],left:"left",fullT:"Full",dr:"Dewan Rakyat",dn:"Dewan Negara",
+ lAvail:"Available",lWarn:"Almost full",lFull:"Full",pick:"Select a date on the calendar to see slots.",
+ sit:"A sitting is in session today – visits are still allowed.",slotL:"Visit slots",book:"Book",
+ name:"Name",ic:"IC / Passport no.",phone:"Phone",email:"Email",org:"Organisation (school/NGO/individual)",cnt:"Group size (max 30)",oku:"Special needs (OKU)",
+ pdpa:"I agree to PDPA 2010",submit:"Confirm booking",taken:"Sorry, this slot was just booked by someone else.",
+ okT:"Booking confirmed",okD:"Keep your booking ID. This slot is now closed to others.",errF:"Please complete all fields and accept PDPA.",errC:"Group size must be 1–30.",
+ closed:"Closed",lClosed:"Closed (weekend)",wk:"Visits are only allowed on weekdays (Mon–Fri).",cfg:"Not connected to Supabase yet. Please fill in config.js."}};
+let lang="ms",cur=new Date(new Date().getFullYear(),new Date().getMonth(),1),sel=null,slot=null,done=null,err="",taken={};
+const t=k=>L[lang][k];
+const used=d=>SLOTS.filter(s=>taken[d+"_"+s]).length;
+
+async function loadTaken(){
+  if(!configured){err=t("cfg");return render()}
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const {data,error}=await sb.rpc("get_taken",{p_from:`${y}-${pad(m+1)}-01`,p_to:fmt(new Date(y,m+1,0))});
+  if(error)err=error.message;
+  taken={};(data||[]).forEach(r=>taken[r.d+"_"+r.t]=1);
+  render();
+}
+function render(){
+  document.documentElement.lang=lang;
+  $("t-title").textContent=t("title");$("t-sub").textContent=t("sub");$("lang").textContent=lang=="ms"?"EN":"BM";
+  $("steps").innerHTML=t("steps").map(s=>`<span>${s}</span>`).join("");
+  const y=cur.getFullYear(),m=cur.getMonth();
+  $("mon").textContent=`${t("months")[m]} ${y}`;
+  let h=t("dow").map(d=>`<div class="dow">${d}</div>`).join("");
+  const first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++)h+="<div></div>";
+  for(let d=1;d<=n;d++){
+    const ds=`${y}-${pad(m+1)}-${pad(d)}`,left=4-used(ds),past=ds<todayS,wd=new Date(y,m,d).getDay(),closed=wd==0||wd==6;
+    h+=`<button class="day ${closed?"closed":left==0?"full":left==1?"warn":""} ${sel==ds?"sel":""}" data-d="${ds}" ${past||closed?"disabled":""}><b>${d}</b>${closed?t("closed"):left==0?t("fullT"):left+"/4 "+t("left")}${SIT[ds]?`<span class="tag ${SIT[ds]}">${t(SIT[ds])}</span>`:""}</button>`;
+  }
+  $("cal").innerHTML=h;
+  $("legend").innerHTML=`<span><i style="background:var(--ok)"></i>${t("lAvail")}</span><span><i style="background:var(--warn)"></i>${t("lWarn")}</span><span><i style="background:var(--full)"></i>${t("lFull")}</span><span><i style="background:var(--bg)"></i>${t("lClosed")}</span><span><i style="background:var(--dr)"></i>${t("dr")}</span><span><i style="background:var(--dn)"></i>${t("dn")}</span>`;
+  $("cal").querySelectorAll(".day").forEach(b=>b.onclick=()=>{sel=b.dataset.d;slot=null;done=null;err="";render()});
+  let s="";
+  if(done)s=`<b>${t("okT")}</b><div class="ref">${esc(done.id)}</div><p class="mut">${done.date} • ${done.time}<br>${t("okD")}</p><button class="b" id="again">OK</button>`;
+  else if(!sel)s=`<p class="mut">${t("pick")}</p>`;
+  else{
+    s=`<b>${sel}</b>${SIT[sel]?`<p class="mut">${t("sit")}</p>`:""}<p class="mut" style="margin-bottom:0">${t("slotL")}</p>`;
+    SLOTS.forEach(x=>{const tk=!!taken[sel+"_"+x];
+      s+=`<div class="slot ${tk?"done":""}"><span>${x}</span>${tk?`<span>${t("fullT")}</span>`:`<button class="b ${slot==x?"pri":""}" data-s="${x}">${t("book")}</button>`}</div>`});
+    if(slot)s+=`<label>${t("name")}</label><input id="f-name"><label>${t("ic")}</label><input id="f-ic"><label>${t("phone")}</label><input id="f-ph" type="tel"><label>${t("email")}</label><input id="f-em" type="email"><label>${t("org")}</label><input id="f-org"><label>${t("cnt")}</label><input id="f-n" type="number" min="1" max="30" value="1"><label>${t("oku")}</label><input id="f-oku">
+      <div class="chk"><input type="checkbox" id="f-pd"><span>${t("pdpa")}</span></div><button class="b pri" id="go">${t("submit")}</button>`;
+  }
+  if(err&&!done)s+=`<div class="msg err">${esc(err)}</div>`;
+  $("side").innerHTML=s;
+  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{slot=b.dataset.s;err="";render()});
+  if($("go"))$("go").onclick=submit;
+  if($("again"))$("again").onclick=()=>{done=null;sel=null;render()};
+}
+async function submit(){
+  const v=id=>$(id).value.trim(),n=+v("f-n");
+  if(!v("f-name")||!v("f-ic")||!v("f-ph")||!v("f-em")||!v("f-org")||!$("f-pd").checked){err=t("errF");return render()}
+  if(!(n>=1&&n<=30)){err=t("errC");return render()}
+  $("go").disabled=true;
+  const time=slot;
+  const {data,error}=await sb.rpc("make_booking",{p_date:sel,p_time:time,p_name:v("f-name"),p_ic:v("f-ic"),p_phone:v("f-ph"),p_email:v("f-em"),p_org:v("f-org"),p_n:n,p_oku:v("f-oku")});
+  slot=null;
+  if(error){err=/taken/.test(error.message)?t("taken"):/weekend/.test(error.message)?t("wk"):error.message}
+  else done={id:data,date:sel,time};
+  await loadTaken();
+}
+$("lang").onclick=()=>{lang=lang=="ms"?"en":"ms";render()};
+$("prev").onclick=()=>{cur=new Date(cur.getFullYear(),cur.getMonth()-1,1);loadTaken()};
+$("next").onclick=()=>{cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);loadTaken()};
+render();loadTaken();
+</script>
+</body>
+</html>
