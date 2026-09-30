@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Kakitangan – Tempahan Lawatan Parlimen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+</head>
+<body>
+<header><h1>Paparan Kakitangan</h1><p>Pemantauan tempahan lawatan Parlimen • Hanya kakitangan berdaftar</p>
+  <div class="bar"><span class="sp"></span><button id="out" hidden>Log keluar</button></div></header>
+<main>
+  <div class="card login" id="login" hidden>
+    <b>Log masuk kakitangan</b>
+    <label>E-mel</label><input id="em" type="email" autocomplete="username">
+    <label>Kata laluan</label><input id="pw" type="password" autocomplete="current-password">
+    <p></p><button class="b pri" id="go">Log masuk</button><div id="lerr"></div>
+  </div>
+  <div class="card" id="dash" hidden>
+    <div class="row"><div><b id="tot"></b><div class="mut">Tempahan • Ketersediaan • Pandangan Harian</div></div>
+      <div><button class="b" id="rf">Muat semula</button> <button class="b pri" id="xl">Muat turun Excel</button></div></div>
+    <div class="tw"><table id="tb"></table></div>
+    <p class="mut">No. KP disembunyikan (4 digit akhir). Data hanya boleh dibaca selepas log masuk.</p>
+  </div>
+  <div class="foot"><a href="index.html">← Paparan pengunjung</a></div>
+</main>
+<script>
+let rows=[];
+const MS_ST=["TERBUKA","PENUH"];
+async function init(){
+  if(!configured){$("login").hidden=false;$("lerr").innerHTML='<div class="msg err">Sila isi config.js</div>';return}
+  const {data:{session}}=await sb.auth.getSession();
+  session?showDash():showLogin();
+}
+function showLogin(){$("login").hidden=false;$("dash").hidden=true;$("out").hidden=true;rows=[]}
+async function showDash(){$("login").hidden=true;$("dash").hidden=false;$("out").hidden=false;await load()}
+async function load(){
+  const {data,error}=await sb.from("bookings").select("*").order("visit_date").order("visit_time");
+  if(error){$("tb").innerHTML=`<tr><td class="mut">${esc(error.message)}</td></tr>`;return}
+  rows=data;$("tot").textContent="Jumlah tempahan: "+rows.length;
+  $("tb").innerHTML=`<tr><th>ID</th><th>Tarikh</th><th>Masa</th><th>Nama</th><th>KP</th><th>Telefon</th><th>E-mel</th><th>Organisasi</th><th>Bil</th><th>OKU</th><th></th></tr>`+
+  (rows.map(r=>`<tr><td>${esc(r.id)}</td><td>${r.visit_date}</td><td>${r.visit_time}</td><td>${esc(r.name)}</td><td>${mask(r.ic)}</td><td>${esc(r.phone)}</td><td>${esc(r.email)}</td><td>${esc(r.org)}</td><td>${r.n}</td><td>${esc(r.oku)}</td><td><button class="b danger" data-c="${esc(r.id)}">Batal</button></td></tr>`).join("")||`<tr><td colspan="11" class="mut">Tiada tempahan lagi.</td></tr>`);
+  document.querySelectorAll("[data-c]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("Batalkan tempahan "+b.dataset.c+"?"))return;
+    const {error}=await sb.from("bookings").delete().eq("id",b.dataset.c);
+    error?alert(error.message):load();
+  });
+}
+$("go").onclick=async()=>{
+  $("go").disabled=true;
+  const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+  $("go").disabled=false;
+  error?$("lerr").innerHTML=`<div class="msg err">${esc(error.message)}</div>`:showDash();
+};
+$("out").onclick=async()=>{await sb.auth.signOut();showLogin()};
+$("rf").onclick=load;
+setInterval(()=>{if(!$("dash").hidden)load()},30000);
+$("xl").onclick=async()=>{
+  await load(); if(!rows.length&&!confirm("Tiada tempahan. Muat turun juga?"))return;
+  const s1=[["ID","Tarikh","Masa","Nama","KP (masked)","Telefon","E-mel","Organisasi","Bilangan","OKU"],...rows.map(r=>[r.id,r.visit_date,r.visit_time,r.name,mask(r.ic),r.phone,r.email,r.org,r.n,r.oku])];
+  const s2=[["Tarikh","Persidangan","Digunakan","Kapasiti","Status"]],d0=new Date();
+  for(let i=0;i<90;i++){const ds=fmt(new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i)),u=rows.filter(r=>r.visit_date==ds).length;
+    s2.push([ds,SIT[ds]=="dr"?"Dewan Rakyat":SIT[ds]=="dn"?"Dewan Negara":"-",u,4,u>=4?MS_ST[1]:MS_ST[0]])}
+  const tm=fmt(new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+1)),s3=[["Hari","Masa","ID","Nama","Organisasi","Bilangan","OKU"]];
+  [todayS,tm].forEach(ds=>SLOTS.forEach(x=>{const r=rows.find(q=>q.visit_date==ds&&q.visit_time==x);s3.push([ds,x,r?r.id:"-",r?r.name:"(kosong)",r?r.org:"",r?r.n:"",r?r.oku:""])}));
+  const wb=XLSX.utils.book_new();
+  [s1,s2,s3].forEach((s,i)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s),["Tempahan","Ketersediaan","Pandangan Harian"][i]));
+  XLSX.writeFile(wb,"tempahan-lawatan-parlimen.xlsx");
+};
+init();
+</script>
+</body>
+</html>
