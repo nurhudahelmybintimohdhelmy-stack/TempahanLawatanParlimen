@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<title>Tempahan Lawatan Parlimen Malaysia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f5f7fb;--card:#fff;--ink:#1a1d29;--mut:#6b7385;--line:#dfe3ec;--navy:#1e3a7a;--ok:#dff3e4;--warn:#fde6c8;--full:#f9d3d3;--dr:#d9e2fb;--dn:#e3dcf7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151d;--card:#1b1f2b;--ink:#e8eaf0;--mut:#9aa2b5;--line:#2c3243;--navy:#5b82d6;--ok:#1f3a29;--warn:#4a3a1c;--full:#4a2323;--dr:#25325a;--dn:#38305a}}
+:root[data-theme="dark"]{--bg:#12151d;--card:#1b1f2b;--ink:#e8eaf0;--mut:#9aa2b5;--line:#2c3243;--navy:#5b82d6;--ok:#1f3a29;--warn:#4a3a1c;--full:#4a2323;--dr:#25325a;--dn:#38305a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px 20px}
+header h1{margin:0;font-size:22px}header p{margin:4px 0 0;opacity:.85;font-size:13px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bar button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:7px 14px;cursor:pointer;font:inherit}
+.bar button.on{background:#fff;color:#1e3a7a;font-weight:600}
+.bar .sp{flex:1}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.head b{font-size:16px}
+.nav{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{font-size:11px;color:var(--mut);text-align:center}
+.day{border:1px solid var(--line);border-radius:8px;padding:4px 5px;min-height:62px;font-size:11px;cursor:pointer;background:var(--ok);color:var(--ink);text-align:left;font-family:inherit}
+.day b{display:block;font-size:13px}
+.day.warn{background:var(--warn)}.day.full{background:var(--full)}
+.day.sel{outline:2px solid var(--navy)}
+.day[disabled]{opacity:.35;cursor:not-allowed}
+.tag{display:block;margin-top:2px;padding:1px 3px;border-radius:4px;font-size:9.5px;line-height:1.2}
+.tag.dr{background:var(--dr)}.tag.dn{background:var(--dn)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:11px;color:var(--mut)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:1px solid var(--line)}
+.mut{color:var(--mut);font-size:13px}
+.slot{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0}
+.slot.done{color:var(--mut)}
+button.b{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer;font:inherit}
+button.b.pri,.slot.pick button{background:var(--navy);color:#fff;border-color:var(--navy)}
+button.b.danger{color:#c0392b}
+label{display:block;font-size:12px;margin:10px 0 3px;color:var(--mut)}
+input,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:13px}.chk input{width:auto;margin-top:3px}
+.msg{padding:10px 12px;border-radius:8px;margin-top:10px;font-size:13px}
+.msg.ok{background:var(--ok)}.msg.err{background:var(--full)}
+.ref{font-size:24px;font-weight:700;color:var(--navy);letter-spacing:1px}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;font-size:12px;color:var(--mut)}
+.steps span{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:3px 10px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="t-title"></h1>
+  <p id="t-sub"></p>
+  <div class="bar">
+    <button id="tabV"></button><button id="tabS"></button><span class="sp"></span>
+    <button id="lang">EN</button>
+  </div>
+</header>
+<main>
+  <div id="visitor">
+    <div class="steps" id="steps"></div>
+    <div class="grid">
+      <div class="card">
+        <div class="head"><button class="nav" id="prev">‹</button><b id="mon"></b><button class="nav" id="next">›</button></div>
+        <div class="cal" id="cal"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="card" id="side"></div>
+    </div>
+  </div>
+  <div id="staff" hidden></div>
+</main>
+
+<script>
+const SLOTS=["09:00","11:00","14:00","15:30"], MAXG=30;
+// Sample sitting dates (replace with the official Parliament calendar)
+const SIT={};
+["2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-12","2026-10-13","2026-10-14","2026-10-15"].forEach(d=>SIT[d]="dr");
+["2026-10-19","2026-10-20","2026-10-21","2026-10-22"].forEach(d=>SIT[d]="dn");
+const L={
+ms:{title:"Sistem Tempahan Lawatan Parlimen",sub:"Tempah lawatan ke Parlimen Malaysia • 4 lawatan sehari • Kalendar Dewan Rakyat & Dewan Negara",
+ visitor:"Pengunjung",staff:"Kakitangan",steps:["1 Pilih tarikh","2 Pilih slot","3 Isi borang","4 Dapat ID tempahan"],
+ months:["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"],
+ dow:["Ahd","Isn","Sel","Rab","Kha","Jum","Sab"],left:"baki",fullT:"Penuh",dr:"Dewan Rakyat",dn:"Dewan Negara",
+ lAvail:"Ada slot",lWarn:"Hampir penuh",lFull:"Penuh",pick:"Pilih tarikh pada kalendar untuk melihat slot.",
+ sit:"Persidangan berlangsung hari ini – lawatan tetap dibenarkan.",slotL:"Slot lawatan",book:"Tempah",
+ name:"Nama",ic:"No. KP / Pasport",phone:"Telefon",email:"E-mel",org:"Organisasi (sekolah/NGO/individu)",cnt:"Bilangan (maks 30)",oku:"Keperluan khas (OKU)",
+ pdpa:"Saya bersetuju dengan PDPA 2010",submit:"Sahkan tempahan",cancel:"Batal",taken:"Maaf, slot ini baru sahaja ditempah orang lain.",
+ okT:"Tempahan disahkan",okD:"Simpan ID tempahan anda. Slot ini telah ditutup untuk orang lain.",errF:"Sila lengkapkan semua medan wajib dan setuju PDPA.",errC:"Bilangan mesti 1–30.",
+ total:"Jumlah tempahan",dl:"Muat turun Excel",id:"ID",date:"Tarikh",time:"Masa",org2:"Organisasi",n:"Bil",act:"Tindakan",
+ locked:"Butiran tempahan hanya boleh dilihat oleh kakitangan (Editor). Sila log masuk sebagai Editor.",empty:"Tiada tempahan lagi.",
+ note:"Data persidangan ialah data contoh. No. KP disembunyikan (4 digit akhir).",local:"Mod demo setempat: data tidak dikongsi antara pengguna. Data dikongsi hanya apabila dibuka dengan log masuk.",
+ confirmC:"Batalkan tempahan ini?",sh:["Tempahan","Ketersediaan","Pandangan Harian"],st:["TERBUKA","PENUH"],sess:"Persidangan"},
+en:{title:"Parliament Visit Booking System",sub:"Book a visit to the Parliament of Malaysia • 4 visits per day • Dewan Rakyat & Dewan Negara calendar",
+ visitor:"Visitor",staff:"Staff",steps:["1 Pick a date","2 Pick a slot","3 Fill the form","4 Get booking ID"],
+ months:["January","February","March","April","May","June","July","August","September","October","November","December"],
+ dow:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],left:"left",fullT:"Full",dr:"Dewan Rakyat",dn:"Dewan Negara",
+ lAvail:"Available",lWarn:"Almost full",lFull:"Full",pick:"Select a date on the calendar to see slots.",
+ sit:"A sitting is in session today – visits are still allowed.",slotL:"Visit slots",book:"Book",
+ name:"Name",ic:"IC / Passport no.",phone:"Phone",email:"Email",org:"Organisation (school/NGO/individual)",cnt:"Group size (max 30)",oku:"Special needs (OKU)",
+ pdpa:"I agree to PDPA 2010",submit:"Confirm booking",cancel:"Cancel",taken:"Sorry, this slot was just booked by someone else.",
+ okT:"Booking confirmed",okD:"Keep your booking ID. This slot is now closed to others.",errF:"Please complete all required fields and accept PDPA.",errC:"Group size must be 1–30.",
+ total:"Total bookings",dl:"Download Excel",id:"ID",date:"Date",time:"Time",org2:"Organisation",n:"No.",act:"Action",
+ locked:"Booking details are visible to staff (Editors) only. Please sign in as an Editor.",empty:"No bookings yet.",
+ note:"Sitting dates are sample data. IC numbers are masked (last 4 digits).",local:"Local demo mode: data is not shared between users. Shared data works when opened while signed in.",
+ confirmC:"Cancel this booking?",sh:["Bookings","Availability","Daily View"],st:["OPEN","FULL"],sess:"Sitting"}};
+let lang="ms",tab="v",cur=new Date(2026,9,1),sel=null,slot=null,done=null,err="";
+let slots={},bookings={},db=null,isStaff=true;
+const $=id=>document.getElementById(id),t=k=>L[lang][k];
+const pad=n=>String(n).padStart(2,"0"),fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayS=fmt(new Date());
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const used=d=>SLOTS.filter(s=>slots[d+"_"+s]).length;
+const mask=ic=>"******"+String(ic).replace(/\D/g,"").slice(-4);
+
+// ---- storage: shared db when available, otherwise local memory ----
+try{const s=JSON.parse(localStorage.getItem("prl")||"null");if(s){slots=s.slots||{};bookings=s.bookings||{}}}catch(e){}
+function saveLocal(){try{localStorage.setItem("prl",JSON.stringify({slots,bookings}))}catch(e){}}
+(async()=>{
+  try{
+    const c=window.claude; if(!c)return;
+    db=await c.use("db"); const u=await c.use("user");
+    if(!db)return;
+    isStaff=u?u.canEdit():false;
+    db.collection("slots").onSnapshot(s=>{slots={};s.docs.forEach(d=>slots[d.id]=d.data());render()});
+    if(isStaff)db.collection("bookings").onSnapshot(s=>{bookings={};s.docs.forEach(d=>bookings[d.id]=d.data());render()});
+    render();
+  }catch(e){db=null}
+})();
+
+function render(){
+  document.documentElement.lang=lang;
+  $("t-title").textContent=t("title");$("t-sub").textContent=t("sub");
+  $("tabV").textContent=t("visitor");$("tabS").textContent=t("staff");
+  $("tabV").className=tab=="v"?"on":"";$("tabS").className=tab=="s"?"on":"";
+  $("lang").textContent=lang=="ms"?"EN":"BM";
+  $("visitor").hidden=tab!="v";$("staff").hidden=tab!="s";
+  if(tab=="v")renderVisitor();else renderStaff();
+}
+function renderVisitor(){
+  $("steps").innerHTML=t("steps").map(s=>`<span>${s}</span>`).join("");
+  const y=cur.getFullYear(),m=cur.getMonth();
+  $("mon").textContent=`${t("months")[m]} ${y}`;
+  let h=t("dow").map(d=>`<div class="dow">${d}</div>`).join("");
+  const first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++)h+="<div></div>";
+  for(let d=1;d<=n;d++){
+    const ds=`${y}-${pad(m+1)}-${pad(d)}`,left=4-used(ds),past=ds<todayS;
+    const cls=left==0?"full":left==1?"warn":"";
+    h+=`<button class="day ${cls} ${sel==ds?"sel":""}" data-d="${ds}" ${past?"disabled":""}><b>${d}</b>${left==0?t("fullT"):left+"/4 "+t("left")}${SIT[ds]?`<span class="tag ${SIT[ds]}">${t(SIT[ds])}</span>`:""}</button>`;
+  }
+  $("cal").innerHTML=h;
+  $("legend").innerHTML=`<span><i style="background:var(--ok)"></i>${t("lAvail")}</span><span><i style="background:var(--warn)"></i>${t("lWarn")}</span><span><i style="background:var(--full)"></i>${t("lFull")}</span><span><i style="background:var(--dr)"></i>${t("dr")}</span><span><i style="background:var(--dn)"></i>${t("dn")}</span>`;
+  $("cal").querySelectorAll(".day").forEach(b=>b.onclick=()=>{sel=b.dataset.d;slot=null;done=null;err="";render()});
+  let s="";
+  if(done){
+    s=`<b>${t("okT")}</b><div class="ref">${done.id}</div><p class="mut">${done.date} • ${done.time}<br>${t("okD")}</p><button class="b" id="again">OK</button>`;
+  }else if(!sel){s=`<p class="mut">${t("pick")}</p>`}
+  else{
+    s=`<b>${sel}</b>`;
+    if(SIT[sel])s+=`<p class="mut">${t("sit")}</p>`;
+    s+=`<p class="mut" style="margin-bottom:0">${t("slotL")}</p>`;
+    SLOTS.forEach(x=>{const k=sel+"_"+x,tk=!!slots[k];
+      s+=`<div class="slot ${tk?"done":""} ${slot==x?"pick":""}"><span>${x}</span>${tk?`<span>${t("fullT")}</span>`:`<button class="b" data-s="${x}">${t("book")}</button>`}</div>`;});
+    if(slot){
+      s+=`<label>${t("name")}</label><input id="f-name"><label>${t("ic")}</label><input id="f-ic"><label>${t("phone")}</label><input id="f-ph" type="tel"><label>${t("email")}</label><input id="f-em" type="email"><label>${t("org")}</label><input id="f-org"><label>${t("cnt")}</label><input id="f-n" type="number" min="1" max="30" value="1"><label>${t("oku")}</label><input id="f-oku">
+      <div class="chk"><input type="checkbox" id="f-pd"><span>${t("pdpa")}</span></div><button class="b pri" id="go">${t("submit")}</button>`;
+    }
+    if(err)s+=`<div class="msg err">${err}</div>`;
+  }
+  $("side").innerHTML=s;
+  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{slot=b.dataset.s;err="";render();setTimeout(()=>$("f-name")&&$("f-name").focus(),0)});
+  if($("go"))$("go").onclick=submit;
+  if($("again"))$("again").onclick=()=>{done=null;sel=null;slot=null;render()};
+}
+async function submit(){
+  const v=id=>$(id).value.trim(),n=+v("f-n");
+  if(!v("f-name")||!v("f-ic")||!v("f-ph")||!v("f-em")||!v("f-org")||!$("f-pd").checked){err=t("errF");return render()}
+  if(!(n>=1&&n<=MAXG)){err=t("errC");return render()}
+  const key=sel+"_"+slot;
+  try{
+    if(db){const g=await db.collection("slots").doc(key).get();if(g.exists){err=t("taken");slot=null;return render()}}
+    else if(slots[key]){err=t("taken");slot=null;return render()}
+    let id;do{id="PRL-"+(1000+Math.floor(Math.random()*9000))}while(Object.values(slots).some(x=>x.id==id));
+    const b={id,date:sel,time:slot,name:v("f-name"),ic:v("f-ic"),phone:v("f-ph"),email:v("f-em"),org:v("f-org"),n,oku:v("f-oku"),created:new Date().toISOString()};
+    if(db){await db.collection("slots").doc(key).set({id,date:sel,time:slot});await db.collection("bookings").doc(id).set(b)}
+    else{slots[key]={id,date:sel,time:slot};bookings[id]=b;saveLocal()}
+    done=b;slot=null;render();
+  }catch(e){err=(e&&e.message)||"Error";render()}
+}
+function renderStaff(){
+  const el=$("staff");
+  if(db&&!isStaff){el.innerHTML=`<div class="card"><p>${t("locked")}</p></div>`;return}
+  const rows=Object.values(bookings).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  el.innerHTML=`<div class="card"><div class="row"><div><b>${t("total")}: ${rows.length}</b><div class="mut">${t("sh").join(" • ")}</div></div><button class="b pri" id="xl">${t("dl")}</button></div>
+  ${db?"":`<div class="msg ok">${t("local")}</div>`}
+  <div class="tw"><table><tr><th>${t("id")}</th><th>${t("date")}</th><th>${t("time")}</th><th>${t("name")}</th><th>KP</th><th>${t("phone")}</th><th>${t("email")}</th><th>${t("org2")}</th><th>${t("n")}</th><th>OKU</th><th>${t("act")}</th></tr>
+  ${rows.map(r=>`<tr><td>${esc(r.id)}</td><td>${esc(r.date)}</td><td>${esc(r.time)}</td><td>${esc(r.name)}</td><td>${mask(r.ic)}</td><td>${esc(r.phone)}</td><td>${esc(r.email)}</td><td>${esc(r.org)}</td><td>${r.n}</td><td>${esc(r.oku)}</td><td><button class="b danger" data-c="${esc(r.id)}">${t("cancel")}</button></td></tr>`).join("")||`<tr><td colspan="11" class="mut">${t("empty")}</td></tr>`}
+  </table></div><p class="mut">${t("note")}</p></div>`;
+  $("xl").onclick=exportXlsx;
+  el.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>cancel(b.dataset.c));
+}
+async function cancel(id){
+  if(!confirm(t("confirmC")))return;
+  const b=bookings[id];if(!b)return;const key=b.date+"_"+b.time;
+  try{
+    if(db){await db.collection("bookings").doc(id).delete();await db.collection("slots").doc(key).delete()}
+    else{delete bookings[id];delete slots[key];saveLocal()}
+    render();
+  }catch(e){alert(e.message||e)}
+}
+async function exportXlsx(){
+  const rows=Object.values(bookings).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const S=t("sh"),ms=L.ms;
+  const sheet1=[["ID","Tarikh","Masa","Nama","KP (masked)","Telefon","E-mel","Organisasi","Bilangan","OKU"],...rows.map(r=>[r.id,r.date,r.time,r.name,mask(r.ic),r.phone,r.email,r.org,r.n,r.oku])];
+  const sheet2=[["Tarikh","Persidangan","Digunakan","Kapasiti","Status"]];
+  const d0=new Date();for(let i=0;i<90;i++){const d=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i),ds=fmt(d),u=used(ds);
+    sheet2.push([ds,SIT[ds]?ms[SIT[ds]]:"-",u,4,u>=4?ms.st[1]:ms.st[0]])}
+  const tm=fmt(new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+1));
+  const sheet3=[["Hari","Masa","ID","Nama","Organisasi","Bilangan","OKU"]];
+  [todayS,tm].forEach(ds=>SLOTS.forEach(x=>{const r=rows.find(q=>q.date==ds&&q.time==x);sheet3.push([ds,x,r?r.id:"-",r?r.name:"(kosong)",r?r.org:"",r?r.n:"",r?r.oku:""])}));
+  const wb=XLSX.utils.book_new();
+  [sheet1,sheet2,sheet3].forEach((s,i)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s),ms.sh[i]));
+  const data=XLSX.write(wb,{type:"array",bookType:"xlsx"});
+  try{
+    const dl=await window.claude.use("downloads");
+    if(!dl)throw 0;
+    await dl.save({filename:"tempahan-lawatan-parlimen.xlsx",data});
+  }catch(e){
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download="tempahan-lawatan-parlimen.xlsx";a.click();
+  }
+}
+$("tabV").onclick=()=>{tab="v";render()};$("tabS").onclick=()=>{tab="s";render()};
+$("lang").onclick=()=>{lang=lang=="ms"?"en":"ms";render()};
+$("prev").onclick=()=>{cur=new Date(cur.getFullYear(),cur.getMonth()-1,1);render()};
+$("next").onclick=()=>{cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);render()};
+render();
+</script>
+</body>
+</html>
